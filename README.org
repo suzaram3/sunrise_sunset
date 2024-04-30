@@ -1,0 +1,117 @@
+#+TITLE: SUNRISE & SUNSET DATA 
+#+AUTHOR: Mitch Suzara
+#+DATE: 2024-04-27
+#+STARTUP: showeverything
+#+OPTIONS: toc:2
+
+* TABLE OF CONTENTS: :toc:
+- [[#introduction][INTRODUCTION]]
+- [[#dependencies][DEPENDENCIES]]
+- [[#purpose][PURPOSE]]
+- [[#program-overview][PROGRAM OVERVIEW]]
+- [[#error-handling][ERROR HANDLING]]
+- [[#example-usage][EXAMPLE USAGE]]
+  - [[#custom-functions][Custom Functions]]
+  - [[#dashboard-config][Dashboard Config]]
+- [[#conclusion][CONCLUSION]]
+
+* INTRODUCTION
+This document provides an overview and explanation of the "Sunrise Sunset" program written in Rust. The program is designed to fetch the sun schedule for the current date.
+
+* DEPENDENCIES
+The program depends on the following external libraries:
+  - [[https://docs.rs/chrono/latest/chrono/][chrono]]: Date and Time for Rust . 
+  - [[https://docs.rs/reqwest/latest/reqwest/][reqwest]]: The reqwest crate provides a convenient, higher-level HTTP Client.
+  - [[https://docs.rs/serde/latest/serde/][serde]]: Serde is a framework for serializing and deserializing Rust data structures efficiently and generically.
+  - [[https://docs.rs/serde_json/latest/serde_json/][serde_json]]: JSON is a ubiquitous open-standard format that uses human-readable text to transmit data objects consisting of key-value pairs.
+  - [[Command line tool to apply global theme packages for changing the look and feel.][toml]]: A serde-compatible TOML decoder and encoder for Rust.
+  - [[https://api.sunrisesunset.io][SunriseSunset API]]: SunriseSunset.io offers a free API for retrieving sunrise and sunset times for a specific longitude and latitude.
+
+
+* PURPOSE
+- The sunrise_sunset program is designed to fetch and process sunrise and sunset data based on geographical locations.
+
+* PROGRAM OVERVIEW
+- It reads configuration settings from a TOML file, typically located at =/etc/sunrise_sunset.toml=.
+
+- It extracts necessary parameters such as output path and default settings from the configuration file.
+
+- Using the configuration settings, it compiles a URL to fetch sunrise and sunset data from an external API.
+
+- It fetches the data from the API and processes it to extract relevant information.
+
+- Finally, it outputs the processed data to the specified output path.
+
+* ERROR HANDLING
+- The program handles errors gracefully by printing informative error messages to stderr and exiting gracefully when encountering errors during configuration reading or data processing.
+
+* EXAMPLE USAGE
+- I have added the fetched data to a custom section in the Emacs dashboard
+  
+- [[Screenshot.png][Screenshot]]
+  
+** Custom Functions
+
+#+begin_src emacs-lisp
+
+(defvar ms/sunrise-set-data nil
+  "Variable to store the parsed sunrise/set data.")
+
+(defun ms/parse-sunrise-set-toml ()
+  "Parse the TOML content representing sunrise/set information and store the results."
+  (interactive)
+  (setq ms/sunrise-set-data (toml:read-from-file "/tmp/sunrise_set.toml")))
+
+(defun ms/display-sunrise-set-results ()
+ "Parse the sunrise/set data if needed and display the relevant values."
+ (interactive)
+ (unless ms/sunrise-set-data
+   (ms/parse-sunrise-set-toml))
+ (if ms/sunrise-set-data
+     (let* ((results (cdr (assoc "results" ms/sunrise-set-data)))
+       (day-length (cdr (assoc "day_length" results)))
+       (golden-hour (cdr (assoc "golden_hour" results)))
+       (solar-noon (cdr (assoc "solar_noon" results)))
+       (sunset (cdr (assoc "sunset" results)))
+       (sunrise (cdr (assoc "sunrise" results)))
+       (date (cdr (assoc "date" results))))
+    (insert "  Date: ")
+    (insert (propertize date 'face 'bold))
+    (insert "\n")
+    (insert "  Sunrise: ")
+    (insert (propertize sunrise 'face 'bold))
+    (insert "\n")
+    (insert "  Sunset: ")
+    (insert (propertize sunset 'face 'bold))
+    (insert "\n")
+    (insert "  Solar Noon: ")
+    (insert (propertize solar-noon 'face 'bold))
+    (insert "\n")
+    (insert "  Golden Hour: ")
+    (insert (propertize golden-hour 'face 'bold))
+    (insert "\n")
+    (insert "  Day Length: ")
+    (insert (propertize day-length 'face 'bold))
+    (insert "\n"))
+   (message "Please parse the TOML file first using `ms/parse-sunrise-set-toml'.")))
+
+  #+end_src
+  
+** Dashboard Config
+#+begin_src emacs-lisp
+(defun dashboard-insert-custom (list-size)
+   (dashboard-insert-heading "Sun Data:"
+                             nil
+                             (all-the-icons-faicon "sun-o"
+                                                   :height 1.2
+                                                   :v-adjust 0.0
+                                                   :face 'dashboard-heading))
+    (insert "\n")
+    (ms/display-sunrise-set-results))
+ 
+ (add-to-list 'dashboard-item-generators  '(custom . dashboard-insert-custom))
+ (setq dashboard-items (append dashboard-items '((custom . 1))))
+#+end_src
+
+* CONCLUSION
+  The sunrise_sunset program serves as a valuable tool for fetching and processing sunrise and sunset data based on geographical locations.

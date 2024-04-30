@@ -1,0 +1,5 @@
+[default]
+base_url = "https://api.sunrisesunset.io"
+lat= 34.85262
+lng= -82.39401
+output = "/tmp/sunrise_set.toml"
